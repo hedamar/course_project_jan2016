@@ -31,8 +31,172 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h1>
-<a id="course_project_jan2016" class="anchor" href="#course_project_jan2016" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>course_project_jan2016</h1>
+        <p>&lt;!DOCTYPE html&gt;</p>
+
+<p></p>
+
+<p></p>
+
+<p>
+
+</p>
+
+<p></p>
+
+
+
+<p>
+</p>
+
+
+
+
+
+
+
+code{white-space: pre;}
+
+<p></p>
+
+
+
+
+  pre:not([class]) {
+    background-color: white;
+  }
+
+
+
+
+<p></p>
+
+<p></p>
+
+
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}
+
+
+<div>
+
+
+
+
+<div id="project-for-machine-learning-class.">
+<h1>
+<a id="project-for-machine-learning-class" class="anchor" href="#project-for-machine-learning-class" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Project for Machine Learning Class.</h1>
+<div id="load-libraries-and-the-data.-then-choose-the-variables-to-be-used-in-the-prediction">
+<h2>
+<a id="load-libraries-and-the-data-then-choose-the-variables-to-be-used-in-the-prediction" class="anchor" href="#load-libraries-and-the-data-then-choose-the-variables-to-be-used-in-the-prediction" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Load libraries and the data. Then, choose the variables to be used in the prediction</h2>
+<pre><code>library(caret)
+library(gbm)
+
+cp_training_data_raw &lt;- read.csv("pml-training.csv", header = TRUE, sep = ",", quote = "\"", dec = ".", fill = TRUE, comment.char = "")
+cp_testing_data_raw &lt;- read.csv("pml-testing.csv", header = TRUE, sep = ",", quote = "\"", dec = ".", fill = TRUE, comment.char = "")</code></pre>
+<p>Visual inspection of the testing data (not shown here for brevity) reveals that a number of potential predictors are all “NA”s in the test data. These variables are also entirely (or almost entirely) missing from the training data. Therefore, I decided to remove these variables as potential predictors while training the model. In addition, I decided to remove the mutliple time stamp-related variables and the counter X from the set of predictors.</p>
+<pre><code>cp_testing_data &lt;- cp_testing_data_raw[, colSums(is.na(cp_testing_data_raw)) != nrow(cp_testing_data_raw)]
+cp_testing_drop &lt;- cp_testing_data_raw[, colSums(is.na(cp_testing_data_raw)) == nrow(cp_testing_data_raw)]
+variables_drop &lt;- names(cp_testing_drop)
+
+cp_training_data &lt;- cp_training_data_raw[ , -which(names(cp_training_data_raw) %in% variables_drop)]
+
+cp_training_data &lt;- cp_training_data[ , -which(names(cp_training_data) %in% c("X", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp"))]</code></pre>
+<p>All remaining variables are used as predictors in the model.</p>
+</div>
+
+<div id="model-choice-and-choice-of-cross-validation-metholodgy">
+<h2>
+<a id="model-choice-and-choice-of-cross-validation-metholodgy" class="anchor" href="#model-choice-and-choice-of-cross-validation-metholodgy" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Model Choice and Choice of Cross-Validation Metholodgy</h2>
+<p>I decided to use a random forest model, since it is highly accurate. As discussed in class, the main concerns with random forests are (a) speed, (b) interpretability and (c) overfitting. Interpretability is not an issue for this assignment, since we are not asked to interpret the results anyway. I took some steps to improve the speed (discussed below). Overfitting remains an issue, but overall, the model performed well on the test set, so I didn’t see a point in going back and trying another model.</p>
+<p>Regarding cross-validation, I decided to do K-fold cross-validation, where k = 10. This choice of K-fold CV was mostly driven by speed/computational power issues. The default CV for random forest in caret is repeated bootstrapping, which results in the model needing a lot of time to run. Finally, I set k = 10, since 3 or 5 seemed too low and a number of sources, including the Wikipedia page for K-fold cross-validation (<a href="https://en.wikipedia.org/wiki/Cross-validation_(statistics)#k-fold_cross-validation">https://en.wikipedia.org/wiki/Cross-validation_(statistics)#k-fold_cross-validation</a>), state that k = 10 is very commonly used.</p>
+</div>
+
+<div id="running-the-model-reporting-the-accuracy-and-the-expected-out-of-sample-error">
+<h2>
+<a id="running-the-model-reporting-the-accuracy-and-the-expected-out-of-sample-error" class="anchor" href="#running-the-model-reporting-the-accuracy-and-the-expected-out-of-sample-error" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Running the Model, Reporting the Accuracy and the Expected Out-of-Sample Error</h2>
+<p>Create the testing sample (70%) and the validation sample (30%). The validation sample (which is called as such since we are provided with another “testing” sample with 20 observations) will be used for the out-of-sample error estimate.</p>
+<pre><code>val &lt;- createDataPartition(cp_training_data$classe, p=0.7, list=FALSE )
+cp_final_training &lt;- cp_training_data[val,]
+cp_validate &lt;- cp_training_data[-val,]</code></pre>
+<pre><code>modfit_rf &lt;- train(classe ~., method="rf", trControl=trainControl(method = "cv", number = 10, savePredictions = TRUE), data=cp_final_training, na.action=na.omit)
+
+print(modfit_rf)</code></pre>
+<pre><code>## Random Forest 
+## 
+## 13737 samples
+##    55 predictor
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 12363, 12365, 12364, 12364, 12363, 12364, ... 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
+##    2    0.9935208  0.9918036  0.001864303  0.002359921
+##   30    0.9978158  0.9972373  0.001415806  0.001790702
+##   59    0.9949038  0.9935536  0.002638119  0.003337380
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 30.</code></pre>
+<pre><code>print(modfit_rf$finalModel)</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 30
+## 
+##         OOB estimate of  error rate: 0.24%
+## Confusion matrix:
+##      A    B    C    D    E  class.error
+## A 3905    0    0    0    1 0.0002560164
+## B    6 2648    3    1    0 0.0037622272
+## C    0    6 2389    1    0 0.0029215359
+## D    0    0    8 2243    1 0.0039964476
+## E    0    1    0    5 2519 0.0023762376</code></pre>
+<p>The output suggests that the model is very accurate within the training sample. It has selected a model that uses 30 random predictors at each split (when the variables are bootstrapped). The overall accuracy is 0.9976, which can be confirmed by the confusion matrix and the OOB estimate of error rate.</p>
+<p>Regarding the expected out-of-sample error, use the validation sample to calculate the out-of-sample error/accuracy:</p>
+<pre><code>validate_rf &lt;- predict(modfit_rf, cp_validate)
+
+table(validate_rf, cp_validate$classe)</code></pre>
+<pre><code>##            
+## validate_rf    A    B    C    D    E
+##           A 1674    1    0    0    0
+##           B    0 1134    1    0    0
+##           C    0    4 1025    5    0
+##           D    0    0    0  959    2
+##           E    0    0    0    0 1080</code></pre>
+<p>The model has very high accuracy in predicting the validation sample. The table implies an accuracy of 99.78 and hence an out-of-sample error of 0.22%. Also, since the OOB estimate of error rate was 0.24% during the training stage of the model, the expected out-of-sample error is between 0.22% and 0.24%. The high accuracy of the model can be due to random forest overfitting the model (or the presence of predictor that is almost perfectly correlated with the outcome).</p>
+<p>Finally, the model is used to predict the outcomes for the test sample that was provided.</p>
+<pre><code>quiz_responses &lt;- predict(modfit_rf, cp_testing_data)</code></pre>
+</div>
+
+<p></p>
+</div>
+
+<p></p>
+</div>
+
+
+
+
+
+
+
+<p>
+</p>
       </section>
     </div>
 
