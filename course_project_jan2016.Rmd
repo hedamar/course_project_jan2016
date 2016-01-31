@@ -31,19 +31,34 @@ I decided to use a random forest model, since it is highly accurate. As discusse
 Regarding cross-validation, I decided to do K-fold cross-validation, where k = 10. This choice of K-fold CV was mostly driven by speed/computational power issues. The default CV for random forest in caret is repeated bootstrapping, which results in the model needing a lot of time to run. Finally, I set k = 10, since 3 or 5 seemed too low and a number of sources, including the Wikipedia page for K-fold cross-validation (https://en.wikipedia.org/wiki/Cross-validation_(statistics)#k-fold_cross-validation), state that k = 10 is very commonly used.
 
 ## Running the Model, Reporting the Accuracy and the Expected Out-of-Sample Error
+Create the testing sample (70%) and the validation sample (30%).  The validation sample (which is called as such since we are provided with another "testing" sample with 20 observations) will be used for the out-of-sample error estimate.
+
+```{r samples, echo=TRUE, cache=TRUE}
+val <- createDataPartition(cp_training_data$classe, p=0.7, list=FALSE )
+cp_final_training <- cp_training_data[val,]
+cp_validate <- cp_training_data[-val,]
+```
 
 ```{r run_model, echo=TRUE, cache=TRUE}
-modfit_rf <- train(classe ~., method="rf", trControl=trainControl(method = "cv", number = 10, savePredictions = TRUE), data=cp_training_data, na.action=na.omit)
+modfit_rf <- train(classe ~., method="rf", trControl=trainControl(method = "cv", number = 10, savePredictions = TRUE), data=cp_final_training, na.action=na.omit)
 
 print(modfit_rf)
 print(modfit_rf$finalModel)
 ```
 
-The output suggests that the model is very accurate. It has selected a model that uses 30 random predictors at each split (when the variables are bootstrapped). The overall accuracy is 0.9985, which can be confirmed by the confusion matrix and the OOB estimate of  error rate.
+The output suggests that the model is very accurate within the training sample. It has selected a model that uses 30 random predictors at each split (when the variables are bootstrapped). The overall accuracy is 0.9976, which can be confirmed by the confusion matrix and the OOB estimate of  error rate.
 
-Regarding the expected out-of-sample error, the confusion matrix reports the OOB esimtate of the error rate to be 0.15%. Since the random forest method calculates each tree by bootstrap where a portion of the sample is left out, I interpreted the OOB estimate of  error rate as the expected out-of-sample error.
+Regarding the expected out-of-sample error, use the validation sample to calculate the out-of-sample error/accuracy:
 
-Finally, the model is used to predict the outcomes for the test sample.
+```{r validate, echo=TRUE, cache=TRUE}
+validate_rf <- predict(modfit_rf, cp_validate)
+
+table(validate_rf, cp_validate$classe)
+```
+
+The model has very high accuracy in predicting the validation sample. The table implies an accuracy of 99.78 and hence an out-of-sample error of 0.22%. Also, since the OOB estimate of error rate was 0.24% during the training stage of the model, the expected out-of-sample error is between 0.22% and 0.24%. The high accuracy of the model can be due to random forest overfitting the model (or the presence of predictor that is almost perfectly correlated with the outcome).
+
+Finally, the model is used to predict the outcomes for the test sample that was provided.
 
 ```{r predict, echo=TRUE, cache=TRUE}
 quiz_responses <- predict(modfit_rf, cp_testing_data)

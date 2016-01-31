@@ -87,26 +87,28 @@ cp_training_data &lt;- cp_training_data[ , -which(names(cp_training_data) %in% c
 </div>
 <div id="running-the-model-reporting-the-accuracy-and-the-expected-out-of-sample-error" class="section level2">
 <h2>Running the Model, Reporting the Accuracy and the Expected Out-of-Sample Error</h2>
-<pre class="r"><code>modfit_rf &lt;- train(classe ~., method=&quot;rf&quot;, trControl=trainControl(method = &quot;cv&quot;, number = 10, savePredictions = TRUE), data=cp_training_data, na.action=na.omit)</code></pre>
-<pre><code>## Loading required package: randomForest
-## randomForest 4.6-12
-## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre class="r"><code>print(modfit_rf)</code></pre>
+<p>Create the testing sample (70%) and the validation sample (30%). The validation sample (which is called as such since we are provided with another “testing” sample with 20 observations) will be used for the out-of-sample error estimate.</p>
+<pre class="r"><code>val &lt;- createDataPartition(cp_training_data$classe, p=0.7, list=FALSE )
+cp_final_training &lt;- cp_training_data[val,]
+cp_validate &lt;- cp_training_data[-val,]</code></pre>
+<pre class="r"><code>modfit_rf &lt;- train(classe ~., method=&quot;rf&quot;, trControl=trainControl(method = &quot;cv&quot;, number = 10, savePredictions = TRUE), data=cp_final_training, na.action=na.omit)
+
+print(modfit_rf)</code></pre>
 <pre><code>## Random Forest 
 ## 
-## 19622 samples
+## 13737 samples
 ##    55 predictor
 ##     5 classes: 'A', 'B', 'C', 'D', 'E' 
 ## 
 ## No pre-processing
 ## Resampling: Cross-Validated (10 fold) 
-## Summary of sample sizes: 17660, 17659, 17660, 17661, 17660, 17660, ... 
+## Summary of sample sizes: 12363, 12365, 12364, 12364, 12363, 12364, ... 
 ## Resampling results across tuning parameters:
 ## 
 ##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
-##    2    0.9964325  0.9954873  0.001765581  0.002233583
-##   30    0.9984710  0.9980661  0.001126849  0.001425167
-##   59    0.9964836  0.9955519  0.001470154  0.001859855
+##    2    0.9935208  0.9918036  0.001864303  0.002359921
+##   30    0.9978158  0.9972373  0.001415806  0.001790702
+##   59    0.9949038  0.9935536  0.002638119  0.003337380
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 30.</code></pre>
@@ -118,17 +120,28 @@ cp_training_data &lt;- cp_training_data[ , -which(names(cp_training_data) %in% c
 ##                      Number of trees: 500
 ## No. of variables tried at each split: 30
 ## 
-##         OOB estimate of  error rate: 0.13%
+##         OOB estimate of  error rate: 0.24%
 ## Confusion matrix:
 ##      A    B    C    D    E  class.error
-## A 5578    1    0    0    1 0.0003584229
-## B    6 3789    1    1    0 0.0021069265
-## C    0    5 3417    0    0 0.0014611338
-## D    0    0    7 3208    1 0.0024875622
-## E    0    0    0    3 3604 0.0008317161</code></pre>
-<p>The output suggests that the model is very accurate. It has selected a model that uses 30 random predictors at each split (when the variables are bootstrapped). The overall accuracy is 0.9985, which can be confirmed by the confusion matrix and the OOB estimate of error rate.</p>
-<p>Regarding the expected out-of-sample error, the confusion matrix reports the OOB esimtate of the error rate to be 0.15%. Since the random forest method calculates each tree by bootstrap where a portion of the sample is left out, I interpreted the OOB estimate of error rate as the expected out-of-sample error.</p>
-<p>Finally, the model is used to predict the outcomes for the test sample.</p>
+## A 3905    0    0    0    1 0.0002560164
+## B    6 2648    3    1    0 0.0037622272
+## C    0    6 2389    1    0 0.0029215359
+## D    0    0    8 2243    1 0.0039964476
+## E    0    1    0    5 2519 0.0023762376</code></pre>
+<p>The output suggests that the model is very accurate within the training sample. It has selected a model that uses 30 random predictors at each split (when the variables are bootstrapped). The overall accuracy is 0.9976, which can be confirmed by the confusion matrix and the OOB estimate of error rate.</p>
+<p>Regarding the expected out-of-sample error, use the validation sample to calculate the out-of-sample error/accuracy:</p>
+<pre class="r"><code>validate_rf &lt;- predict(modfit_rf, cp_validate)
+
+table(validate_rf, cp_validate$classe)</code></pre>
+<pre><code>##            
+## validate_rf    A    B    C    D    E
+##           A 1674    1    0    0    0
+##           B    0 1134    1    0    0
+##           C    0    4 1025    5    0
+##           D    0    0    0  959    2
+##           E    0    0    0    0 1080</code></pre>
+<p>The model has very high accuracy in predicting the validation sample. The table implies an accuracy of 99.78 and hence an out-of-sample error of 0.22%. Also, since the OOB estimate of error rate was 0.24% during the training stage of the model, the expected out-of-sample error is between 0.22% and 0.24%. The high accuracy of the model can be due to random forest overfitting the model (or the presence of predictor that is almost perfectly correlated with the outcome).</p>
+<p>Finally, the model is used to predict the outcomes for the test sample that was provided.</p>
 <pre class="r"><code>quiz_responses &lt;- predict(modfit_rf, cp_testing_data)</code></pre>
 </div>
 </div>
